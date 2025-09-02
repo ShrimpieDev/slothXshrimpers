@@ -3,442 +3,453 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crown Photo Generator</title>
+    <title>Sloths & Shrimpers Race</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #1a1a2e;
-            color: #ffffff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 2rem;
-        }
-        .container {
-            background-color: #2e0e5a;
-            border-radius: 1rem;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-            padding: 2rem;
-            max-width: 90%;
-            width: 100%;
-            text-align: center;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
         canvas {
-            border: 2px solid #5a189a;
-            border-radius: 0.75rem;
-            width: 100%;
-            height: auto;
-            max-width: 500px;
-            margin: 1.5rem auto;
             display: block;
-            cursor: default;
+            background-color: #2c5246;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+            width: 400px;
+            height: 600px;
         }
-        .file-input-label {
-            display: inline-block;
-            background-color: #8c52ff;
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.75rem;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        .file-input-label:hover {
-            background-color: #7234e4;
-        }
-        .hidden-file-input {
-            display: none;
-        }
-        .download-btn {
-            background-color: #5a189a;
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.75rem;
-            transition: background-color 0.3s ease;
-            cursor: pointer;
-            border: none;
-        }
-        .download-btn:hover {
-            background-color: #431175;
-        }
-        @media (max-width: 640px) {
-            .container {
-                padding: 1rem;
+        @media (max-width: 600px) {
+            canvas {
+                width: 100vw;
+                height: 100vh;
             }
+        }
+        .character-btn {
+            background-size: cover;
+            background-position: center;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 4px solid transparent;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .character-btn:hover {
+            transform: scale(1.1);
+            border-color: #ffffff;
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1 class="text-3xl sm:text-4xl font-bold mb-2">Crown Your Photo</h1>
-        <p class="text-gray-300 mb-6">Upload an image to add a stylish crown!</p>
-        
-        <!-- File upload button with custom styling -->
-        <input type="file" id="image-upload" accept="image/*" class="hidden-file-input">
-        <label for="image-upload" class="file-input-label">
-            Upload Image
-        </label>
-
-        <!-- Canvas for drawing the image and crown -->
-        <canvas id="crown-canvas"></canvas>
-
-        <!-- Instructions for the user -->
-        <div id="instructions" class="text-gray-300 text-sm mt-4 hidden">
-            <p><strong>Drag</strong> the crown to move it.</p>
-            <p><strong>Drag a corner handle</strong> to resize.</p>
-            <p><strong>Drag the bottom handle</strong> to rotate.</p>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center p-4 min-h-screen">
+    <!-- Modal for messages -->
+    <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-6 rounded-2xl shadow-xl max-w-sm w-full text-center border-2 border-gray-700">
+            <p id="modal-message" class="text-xl font-semibold mb-4 text-white"></p>
+            <button id="close-modal-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-xl transition-colors">
+                OK
+            </button>
+            <a id="share-x-btn" class="inline-block mt-4 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-xl transition-colors hidden">
+                Share on X
+            </a>
         </div>
-
-        <!-- Button to download the final image -->
-        <button id="download-btn" class="download-btn mt-4">Download Crowned Photo</button>
     </div>
-
+    <!-- Main Game Container -->
+    <div class="flex flex-col items-center gap-4 w-full max-w-5xl">
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-white text-center drop-shadow-lg mb-4 uppercase">
+            Sloths & Shrimpers Race
+        </h1>
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="bg-gray-800 rounded-2xl p-6 shadow-xl w-full flex flex-col items-center justify-center gap-6 mb-4 border-2 border-gray-700">
+            <h2 class="text-3xl font-bold text-center">Loading Assets...</h2>
+            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500"></div>
+        </div>
+        <!-- Instructions and Character Selection Screen -->
+        <div id="start-screen" class="bg-gray-800 p-6 shadow-xl w-full flex flex-col items-center justify-center gap-6 mb-4 border-2 border-gray-700 hidden">
+            <h2 class="text-3xl font-bold mt-4 uppercase">CHOOSE YOUR CHARACTER</h2>
+            <div class="flex gap-8">
+                <button id="select-sloth-btn" class="character-btn" style="background-image: url('https://github.com/ShrimpieDev/slothXshrimpers/blob/main/sloth-image.jpg?raw=true');"></button>
+                <button id="select-shrimp-btn" class="character-btn" style="background-image: url('https://github.com/ShrimpieDev/slothXshrimpers/blob/main/shrimper-image.jpg?raw=true');"></button>
+            </div>
+            <div class="bg-gray-900 p-6 w-full max-w-lg">
+                <h2 class="text-xl font-bold text-center">How to Play</h2>
+                <ul class="text-center text-lg list-none mt-4 space-y-2">
+                    <li>A -> LEFT, D -> RIGHT, W -> SPEED UP</li>
+                    <li>Objective: Survive as long as you can!</li>
+                </ul>
+            </div>
+        </div>
+        <!-- Canvas -->
+        <canvas id="game-canvas" class="hidden"></canvas>
+    </div>
+    <footer class="mt-8 text-center text-xs text-gray-400">
+        This game made by a community member of <a href="https://x.com/CelestineSloths" target="_blank" class="text-white hover:underline">@CelestineSloths</a> by <a href="https://x.com/Miyulux" target="_blank" class="text-white hover:underline">@Miyulux</a> to attend the event.
+    </footer>
     <script>
-        // Get references to the DOM elements
-        const imageUpload = document.getElementById('image-upload');
-        const canvas = document.getElementById('crown-canvas');
-        const downloadBtn = document.getElementById('download-btn');
-        const instructionsDiv = document.getElementById('instructions');
-        const ctx = canvas.getContext('2d');
+        let canvas, ctx;
+        let gameLoopInterval;
+        let speedIncreaseInterval;
 
-        // URL for the crown image from the user
-        const crownImageUrl = "https://raw.githubusercontent.com/ShrimpieDev/OctrianPFP/main/Untitled%20design%20(18).png";
-        
-        let userImage = null;
-        let crownImage = null;
-        
-        let interaction = null; // Stores the current interaction mode ('drag', 'resize', 'rotate')
-        let activeHandle = null; // Stores which resize handle is being used
-        let startPos = {}; // Stores the starting mouse position for the interaction
-        let startCrownState = {}; // Stores the crown's properties at the start of interaction
+        const modal = document.getElementById('modal');
+        const modalMessage = document.getElementById('modal-message');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const shareXBtn = document.getElementById('share-x-btn');
+        const startScreen = document.getElementById('start-screen');
+        const selectSlothBtn = document.getElementById('select-sloth-btn');
+        const selectShrimpBtn = document.getElementById('select-shrimp-btn');
+        const loadingScreen = document.getElementById('loading-screen');
 
-        // Crown properties
-        let crownX = 0;
-        let crownY = 0;
-        let crownWidth = 0;
-        let crownHeight = 0;
-        let crownRotation = 0;
+        let playerChar = null;
+        let gameActive = false;
+        const BASE_SPEED = 8;
+        const LANE_WIDTH = 2;
+        const LANE_COUNT = 3;
+        const OBSTACLE_SPACING_Y = 150; 
 
-        const handleSize = 10;
-        const rotateHandleOffset = 30;
+        const assets = {
+            slothCar: new Image(),
+            shrimpCar: new Image(),
+            slothObs1: new Image(),
+            slothObs2: new Image(),
+            shrimpObs1: new Image(),
+            shrimpObs2: new Image()
+        };
 
-        // Function to get the mouse/touch position on the canvas
-        function getPos(e) {
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            let clientX, clientY;
-            
-            if (e.touches && e.touches.length > 0) {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
+        const assetUrls = {
+            slothCar: 'https://github.com/ShrimpieDev/slothXshrimpers/blob/main/sloth-car.png?raw=true',
+            shrimpCar: 'https://github.com/ShrimpieDev/slothXshrimpers/blob/main/anoma-car.png?raw=true',
+            slothObs1: 'https://github.com/ShrimpieDev/slothXshrimpers/blob/main/sloth-obs-1.png?raw=true',
+            slothObs2: 'https://github.com/ShrimpieDev/slothXshrimpers/blob/main/sloth-obs-2.png?raw=true',
+            shrimpObs1: 'https://github.com/ShrimpieDev/slothXshrimpers/blob/main/anoma-obs-1.png?raw=true',
+            shrimpObs2: 'https://github.com/ShrimpieDev/slothXshrimpers/blob/main/anoma-obs-2.png?raw=true'
+        };
+
+        function preloadAssets() {
+            const promises = Object.keys(assets).map(key => {
+                return new Promise((resolve, reject) => {
+                    assets[key].onload = () => resolve();
+                    assets[key].onerror = () => reject(new Error(`Failed to load image: ${assetUrls[key]}`));
+                    assets[key].src = assetUrls[key];
+                });
+            });
+            return Promise.all(promises);
+        }
+
+        function showMessage(message, score) {
+            modalMessage.textContent = message;
+            modal.classList.remove('hidden');
+            if (score !== undefined) {
+                shareXBtn.classList.remove('hidden');
+                const characterName = gameState.player.type === 'sloth' ? 'Sloth' : 'Shrimper';
+                const shareText = `I played as ${characterName} and scored ${score}. Check out this awesome game by @Miyulux for @Shrimpers_nft @anoma`;
+                shareXBtn.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
             } else {
-                clientX = e.clientX;
-                clientY = e.clientY;
+                shareXBtn.classList.add('hidden');
             }
-
-            return {
-                x: (clientX - rect.left) * scaleX,
-                y: (clientY - rect.top) * scaleY
-            };
         }
 
-        // Function to check if a point is inside a circle (for handles)
-        function isPointInCircle(point, center, radius) {
-            return Math.sqrt(Math.pow(point.x - center.x, 2) + Math.pow(point.y - center.y, 2)) <= radius;
+        closeModalBtn.addEventListener('click', () => {
+            modal.classList.add('hidden');
+            shareXBtn.classList.add('hidden');
+            if (gameState.gameEnded) {
+                clearInterval(speedIncreaseInterval);
+                startScreen.classList.remove('hidden');
+                canvas.classList.add('hidden');
+                
+                gameState.player.x = 0;
+                gameState.player.y = 0;
+                gameState.obstacles = [];
+                gameState.gameEnded = false;
+                gameState.score = 0;
+                gameState.player.speed = BASE_SPEED;
+            }
+        });
+
+        const playerSizes = {
+            sloth: { width: 48, height: 66 },
+            shrimp: { width: 60, height: 82.5 }
+        };
+        const obstacleSizes = {
+            width: 43.75 * 0.75, 
+            height: 43.75 * 0.75
+        };
+
+        let gameState = {
+            player: { x: 0, y: 0, targetX: 0, currentLane: 1, speed: BASE_SPEED, isActioning: false, type: null, size: {} },
+            obstacles: [],
+            gameEnded: false,
+            score: 0
+        };
+        
+        function setupCanvas() {
+            canvas = document.getElementById('game-canvas');
+            ctx = canvas.getContext('2d');
+            canvas.width = 400;
+            canvas.height = 600;
         }
 
-        // Function to check what part of the crown the user clicked
-        function hitTest(pos) {
-            const centerX = crownX + crownWidth / 2;
-            const centerY = crownY + crownHeight / 2;
-            const crownOrigin = { x: centerX, y: centerY };
+        function clearCanvas() {
+            ctx.fillStyle = playerChar === 'sloth' ? '#3e2723' : '#1a237e'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        function drawLanes() {
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, canvas.height);
+            ctx.stroke();
 
-            // Transform mouse position to the crown's local coordinate system
-            const localX = pos.x - crownOrigin.x;
-            const localY = pos.y - crownOrigin.y;
-            const rotatedX = localX * Math.cos(-crownRotation) - localY * Math.sin(-crownRotation);
-            const rotatedY = localX * Math.sin(-crownRotation) + localY * Math.cos(-crownRotation);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width, 0);
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.stroke();
 
-            // Bounding box for the crown
-            const bbox = {
-                x: -crownWidth / 2, y: -crownHeight / 2,
-                width: crownWidth, height: crownHeight
-            };
+            ctx.strokeStyle = playerChar === 'sloth' ? '#B0B0B0' : '#4a7c6f';
+            ctx.lineWidth = LANE_WIDTH;
+            const laneSpacing = canvas.width / LANE_COUNT;
 
-            // Check for hits on resize handles (corner circles)
-            const handles = {
-                'br': { x: bbox.x + bbox.width, y: bbox.y + bbox.height },
-                'bl': { x: bbox.x, y: bbox.y + bbox.height },
-                'tr': { x: bbox.x + bbox.width, y: bbox.y },
-                'tl': { x: bbox.x, y: bbox.y }
-            };
+            for (let i = 1; i < LANE_COUNT; i++) {
+                let x = i * laneSpacing;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+        }
 
-            for (const handle in handles) {
-                if (isPointInCircle({ x: rotatedX, y: rotatedY }, handles[handle], handleSize)) {
-                    return { type: 'resize', handle: handle };
-                }
+        function generateObstacleRow() {
+            const obstacleWidth = obstacleSizes.width;
+            const obstacleHeight = obstacleSizes.height;
+            let type;
+            let obstacleImages = [];
+
+            if (playerChar === 'sloth') {
+                type = { width: obstacleWidth, height: obstacleHeight, smashable: true };
+                obstacleImages = [assets.slothObs1, assets.slothObs2];
+            } else { // shrimp
+                type = { width: obstacleWidth, height: obstacleHeight, smashable: false };
+                obstacleImages = [assets.shrimpObs1, assets.shrimpObs2];
             }
             
-            // Check for hit on rotate handle
-            const rotateHandlePos = { x: 0, y: bbox.y + bbox.height + rotateHandleOffset };
-            if (isPointInCircle({ x: rotatedX, y: rotatedY }, rotateHandlePos, handleSize)) {
-                return { type: 'rotate' };
-            }
+            const laneSpacing = canvas.width / LANE_COUNT;
+            const obstaclesInRow = [];
+            
+            const laneIndex = Math.floor(Math.random() * LANE_COUNT);
+            const x = laneIndex * laneSpacing + (laneSpacing - type.width) / 2;
+            const randomImageIndex = Math.floor(Math.random() * obstacleImages.length);
+            const yOffset = Math.random() * 50 - 25; 
 
-            // Check for hit on the crown body (drag)
-            if (rotatedX >= bbox.x && rotatedX <= bbox.x + bbox.width &&
-                rotatedY >= bbox.y && rotatedY <= bbox.y + bbox.height) {
-                return { type: 'drag' };
-            }
-
-            return null;
+            obstaclesInRow.push({
+                x: x,
+                y: -50 + yOffset,
+                type: type,
+                width: type.width,
+                height: type.height,
+                image: obstacleImages[randomImageIndex],
+                smashed: false,
+                lane: laneIndex
+            });
+            
+            return obstaclesInRow;
+        }
+        
+        function drawPlayer(player) {
+            let image = player.type === 'sloth' ? assets.slothCar : assets.shrimpCar;
+            ctx.drawImage(image, player.x, player.y, player.size.width, player.size.height);
         }
 
-        // Main function to draw the image and crown
-        function drawCanvas() {
-            if (!userImage) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.font = '24px Inter';
-                ctx.fillStyle = '#6a6a8c';
-                ctx.textAlign = 'center';
-                ctx.fillText('Upload an image to get started', canvas.width / 2, canvas.height / 2);
-                instructionsDiv.classList.add('hidden');
+        function drawObstacle(obstacle) {
+            if (obstacle.smashed) return;
+            ctx.drawImage(obstacle.image, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        }
+
+        function drawText(text, x, y, size = 20, color = 'white') {
+            ctx.fillStyle = color;
+            ctx.font = `${size}px Inter`;
+            ctx.fillText(text, x, y);
+        }
+
+        function checkCollision(player, obstacle) {
+            return player.x < obstacle.x + obstacle.width &&
+                   player.x + player.size.width > obstacle.x &&
+                   player.y < obstacle.y + obstacle.height &&
+                   player.y + player.size.height > obstacle.y;
+        }
+
+        function gameLoop() {
+            if (!gameActive) {
+                clearInterval(gameLoopInterval);
                 return;
             }
-
-            // Draw the user's image first
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(userImage, 0, 0, canvas.width, canvas.height);
             
-            if (crownImage) {
-                // Save the current canvas state
-                ctx.save();
-                
-                // Translate to the center of the crown
-                const centerX = crownX + crownWidth / 2;
-                const centerY = crownY + crownHeight / 2;
-                ctx.translate(centerX, centerY);
-                
-                // Rotate the context
-                ctx.rotate(crownRotation);
-                
-                // Draw the crown image centered on the translated point
-                ctx.drawImage(crownImage, -crownWidth / 2, -crownHeight / 2, crownWidth, crownHeight);
-
-                // Draw the interactive bounding box and handles
-                ctx.strokeStyle = '#8c52ff';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(-crownWidth / 2, -crownHeight / 2, crownWidth, crownHeight);
-                
-                // Draw corner handles
-                const handles = [
-                    { x: -crownWidth / 2, y: -crownHeight / 2 }, // Top-left
-                    { x: crownWidth / 2, y: -crownHeight / 2 }, // Top-right
-                    { x: crownWidth / 2, y: crownHeight / 2 }, // Bottom-right
-                    { x: -crownWidth / 2, y: crownHeight / 2 }  // Bottom-left
-                ];
-                
-                ctx.fillStyle = '#ffffff';
-                ctx.strokeStyle = '#2e0e5a';
-                ctx.lineWidth = 1;
-                handles.forEach(handle => {
-                    ctx.beginPath();
-                    ctx.arc(handle.x, handle.y, handleSize / 2, 0, 2 * Math.PI);
-                    ctx.fill();
-                    ctx.stroke();
-                });
-                
-                // Draw rotation handle
-                ctx.beginPath();
-                ctx.arc(0, crownHeight / 2 + rotateHandleOffset, handleSize / 2, 0, 2 * Math.PI);
-                ctx.fill();
-                ctx.stroke();
-
-                // Restore the canvas state
-                ctx.restore();
-            }
-        }
-        
-        function handleStart(e) {
-            e.preventDefault();
-            const pos = getPos(e);
-            
-            // Store the initial position and crown state
-            startPos = pos;
-            startCrownState = {
-                x: crownX, y: crownY,
-                width: crownWidth, height: crownHeight,
-                rotation: crownRotation
-            };
-
-            const hit = hitTest(pos);
-            if (hit) {
-                interaction = hit.type;
-                if (interaction === 'resize') {
-                    activeHandle = hit.handle;
+            const moveSpeed = 10;
+            if (Math.abs(gameState.player.targetX - gameState.player.x) > moveSpeed) {
+                if (gameState.player.targetX > gameState.player.x) {
+                    gameState.player.x += moveSpeed;
+                } else {
+                    gameState.player.x -= moveSpeed;
                 }
             } else {
-                interaction = null;
-            }
-        }
-
-        function handleMove(e) {
-            if (!interaction) return;
-            e.preventDefault();
-
-            const pos = getPos(e);
-            const dx = pos.x - startPos.x;
-            const dy = pos.y - startPos.y;
-
-            if (interaction === 'drag') {
-                crownX = startCrownState.x + dx;
-                crownY = startCrownState.y + dy;
-            } else if (interaction === 'resize') {
-                const aspect = crownImage.naturalWidth / crownImage.naturalHeight;
-                let newWidth, newHeight;
-                
-                if (activeHandle === 'br' || activeHandle === 'tl') {
-                    newWidth = startCrownState.width + dx;
-                    newHeight = startCrownState.height + (dx / aspect);
-                } else if (activeHandle === 'bl' || activeHandle === 'tr') {
-                    newWidth = startCrownState.width - dx;
-                    newHeight = startCrownState.height - (dx / aspect);
-                }
-                
-                // Prevent negative dimensions
-                if (newWidth > 20 && newHeight > 20) {
-                    crownWidth = newWidth;
-                    crownHeight = newHeight;
-                    
-                    // Adjust position to keep the opposite handle fixed
-                    if (activeHandle === 'tl' || activeHandle === 'bl') {
-                        crownX = startCrownState.x - (crownWidth - startCrownState.width);
-                    }
-                    if (activeHandle === 'tl' || activeHandle === 'tr') {
-                        crownY = startCrownState.y - (crownHeight - startCrownState.height);
-                    }
-                }
-            } else if (interaction === 'rotate') {
-                const centerX = startCrownState.x + startCrownState.width / 2;
-                const centerY = startCrownState.y + startCrownState.height / 2;
-
-                const startAngle = Math.atan2(startPos.y - centerY, startPos.x - centerX);
-                const currentAngle = Math.atan2(pos.y - centerY, pos.x - centerX);
-
-                crownRotation = startCrownState.rotation + (currentAngle - startAngle);
+                gameState.player.x = gameState.player.targetX;
             }
 
-            drawCanvas();
+            gameState.obstacles.forEach(obs => {
+                obs.y += gameState.player.speed;
+            });
+            
+            gameState.obstacles.forEach(obs => {
+                if (!obs.smashed) {
+                    if (checkCollision(gameState.player, obs)) {
+                        if (gameState.player.type === 'sloth' && obs.type.smashable && gameState.player.isActioning) {
+                            obs.smashed = true;
+                        } else {
+                            gameActive = false;
+                            gameState.gameEnded = true;
+                            const message = gameState.player.type === 'sloth' ? "You are too lazy.." : "You couldn't realize your intention";
+                            showMessage(message, gameState.score);
+                        }
+                    }
+                }
+            });
+            
+            const lastObstacle = gameState.obstacles[gameState.obstacles.length - 1];
+            if (!lastObstacle || lastObstacle.y > OBSTACLE_SPACING_Y) {
+                const newRow = generateObstacleRow();
+                gameState.obstacles.push(...newRow);
+            }
+
+            gameState.obstacles = gameState.obstacles.filter(obs => obs.y < canvas.height);
+            gameState.score += 1;
+
+            clearCanvas();
+            drawLanes();
+            drawPlayer(gameState.player);
+            
+            gameState.obstacles.forEach(drawObstacle);
+            
+            drawText(`Score: ${gameState.score}`, 10, 30);
         }
 
-        function handleEnd() {
-            interaction = null;
-            activeHandle = null;
-        }
+        selectSlothBtn.addEventListener('click', () => {
+            playerChar = 'sloth';
+            startGame();
+        });
 
-        // Event listeners for mouse and touch
-        canvas.addEventListener('mousedown', handleStart);
-        canvas.addEventListener('mousemove', handleMove);
-        canvas.addEventListener('mouseup', handleEnd);
-        canvas.addEventListener('mouseleave', handleEnd);
+        selectShrimpBtn.addEventListener('click', () => {
+            playerChar = 'shrimp';
+            startGame();
+        });
+
+        function startGame() {
+            startScreen.classList.add('hidden');
+            canvas.classList.remove('hidden');
+            gameActive = true;
+            gameState.player.type = playerChar;
+            gameState.player.size = playerSizes[playerChar];
+            const laneSpacing = canvas.width / LANE_COUNT;
+            gameState.player.currentLane = 1; 
+            gameState.player.x = gameState.player.currentLane * laneSpacing + (laneSpacing - gameState.player.size.width) / 2;
+            gameState.player.targetX = gameState.player.x;
+            gameState.player.y = canvas.height - 150;
+            gameState.obstacles = [];
+            gameState.gameEnded = false;
+            gameState.score = 0;
+            gameState.player.speed = BASE_SPEED;
+
+            if (playerChar === 'shrimp') {
+                canvas.style.backgroundColor = '#1a237e';
+            } else {
+                canvas.style.backgroundColor = '#3e2723';
+            }
+            
+            gameLoopInterval = setInterval(gameLoop, 1000/60);
+
+            speedIncreaseInterval = setInterval(() => {
+                gameState.player.speed += 0.5;
+            }, 1000);
+        }
         
-        canvas.addEventListener('touchstart', (e) => handleStart(e));
-        canvas.addEventListener('touchmove', (e) => handleMove(e));
-        canvas.addEventListener('touchend', (e) => handleEnd(e));
+        window.onload = function() {
+            setupCanvas();
+            preloadAssets().then(() => {
+                loadingScreen.classList.add('hidden');
+                startScreen.classList.remove('hidden');
+                
+                let touchStartX = null;
+                const swipeThreshold = 50; 
 
-        // Function to handle image upload
-        function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                userImage = new Image();
-                userImage.onload = function() {
-                    canvas.width = userImage.naturalWidth;
-                    canvas.height = userImage.naturalHeight;
-                    
-                    if (crownImage) {
-                         crownWidth = userImage.naturalWidth * 0.45;
-                         crownHeight = crownImage.naturalHeight * (crownWidth / crownImage.naturalWidth);
-                         crownX = (canvas.width / 2) - (crownWidth / 2);
-                         crownY = canvas.height * 0.05;
-                         crownRotation = 0;
+                document.addEventListener('keydown', (e) => {
+                    if (!gameActive) return;
+                    const laneSpacing = canvas.width / LANE_COUNT;
+                    if (e.key === 'ArrowLeft' || e.key === 'a') {
+                        if (gameState.player.currentLane > 0) {
+                            gameState.player.currentLane--;
+                            gameState.player.targetX = gameState.player.currentLane * laneSpacing + (laneSpacing - gameState.player.size.width) / 2;
+                        }
+                    } else if (e.key === 'ArrowRight' || e.key === 'd') {
+                        if (gameState.player.currentLane < LANE_COUNT - 1) {
+                            gameState.player.currentLane++;
+                            gameState.player.targetX = gameState.player.currentLane * laneSpacing + (laneSpacing - gameState.player.size.width) / 2;
+                        }
+                    } else if (e.key === ' ' || e.key === 'ArrowUp') {
+                        gameState.player.isActioning = true;
+                    } else if (e.key === 'w' || e.key === 'W') {
+                        gameState.player.speed = 10;
                     }
-                    drawCanvas();
-                    instructionsDiv.classList.remove('hidden');
-                };
-                userImage.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+                });
+
+                document.addEventListener('keyup', (e) => {
+                    if (!gameActive) return;
+                    if (e.key === ' ' || e.key === 'ArrowUp') {
+                        gameState.player.isActioning = false;
+                    } else if (e.key === 'w' || e.key === 'W') {
+                        gameState.player.speed = BASE_SPEED;
+                    }
+                });
+
+                canvas.addEventListener('touchstart', (e) => {
+                    if (!gameActive) return;
+                    e.preventDefault();
+                    if (e.touches.length === 2) {
+                        gameState.player.isActioning = true;
+                    } else {
+                        touchStartX = e.touches[0].clientX;
+                    }
+                });
+
+                canvas.addEventListener('touchend', (e) => {
+                    if (!gameActive || touchStartX === null) return;
+                    e.preventDefault();
+                    const touchEndX = e.changedTouches[0].clientX;
+                    const touchDiff = touchEndX - touchStartX;
+                    const laneSpacing = canvas.width / LANE_COUNT;
+
+                    if (touchDiff > swipeThreshold) {
+                        if (gameState.player.currentLane < LANE_COUNT - 1) {
+                            gameState.player.currentLane++;
+                            const newX = gameState.player.currentLane * laneSpacing + (laneSpacing - gameState.player.size.width) / 2;
+                            gameState.player.x = newX;
+                            gameState.player.targetX = newX;
+                        }
+                    } else if (touchDiff < -swipeThreshold) {
+                        if (gameState.player.currentLane > 0) {
+                            gameState.player.currentLane--;
+                            const newX = gameState.player.currentLane * laneSpacing + (laneSpacing - gameState.player.size.width) / 2;
+                            gameState.player.x = newX;
+                            gameState.player.targetX = newX;
+                        }
+                    }
+                    gameState.player.isActioning = false;
+                    touchStartX = null;
+                });
+            }).catch(error => {
+                console.error("Failed to load game assets:", error);
+                loadingScreen.textContent = "Error loading game assets.";
+                startScreen.classList.remove('hidden');
+            });
         }
-
-        // Function to load the crown image
-        function loadCrownImage() {
-            // Using fetch to get the image data as a blob to avoid 'tainted canvas'
-            fetch(crownImageUrl)
-                .then(response => response.blob())
-                .then(blob => {
-                    const objectURL = URL.createObjectURL(blob);
-                    crownImage = new Image();
-                    crownImage.onload = function() {
-                        URL.revokeObjectURL(objectURL); // Clean up the object URL
-                        // Initial size and position once the crown image is loaded
-                        const container = document.querySelector('.container');
-                        const containerWidth = container.offsetWidth;
-                        const size = Math.min(containerWidth * 0.9, 500);
-                        canvas.width = size;
-                        canvas.height = size;
-                        
-                        crownWidth = canvas.width * 0.45;
-                        crownHeight = crownImage.naturalHeight * (crownWidth / crownImage.naturalWidth);
-                        crownX = (canvas.width / 2) - (crownWidth / 2);
-                        crownY = canvas.height * 0.05;
-                        drawCanvas();
-                    };
-                    crownImage.onerror = () => {
-                        console.error("Failed to load crown image from URL.");
-                    };
-                    crownImage.src = objectURL;
-                })
-                .catch(error => console.error("Error fetching crown image:", error));
-        }
-
-        // Add event listeners
-        imageUpload.addEventListener('change', handleImageUpload);
-        downloadBtn.addEventListener('click', function() {
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = userImage.naturalWidth;
-            tempCanvas.height = userImage.naturalHeight;
-            
-            tempCtx.drawImage(userImage, 0, 0, userImage.naturalWidth, userImage.naturalHeight);
-            
-            // Draw crown on temp canvas
-            const centerX = crownX + crownWidth / 2;
-            const centerY = crownY + crownHeight / 2;
-            tempCtx.save();
-            tempCtx.translate(centerX, centerY);
-            tempCtx.rotate(crownRotation);
-            tempCtx.drawImage(crownImage, -crownWidth / 2, -crownHeight / 2, crownWidth, crownHeight);
-            tempCtx.restore();
-
-            const dataUrl = tempCanvas.toDataURL('image/png');
-            const link = document.createElement('a');
-            link.href = dataUrl;
-            link.download = 'crowned_photo.png';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        });
-
-        // Set initial canvas size and message
-        window.addEventListener('load', () => {
-            loadCrownImage();
-            drawCanvas(); // Initial draw with placeholder message
-        });
     </script>
 </body>
 </html>
