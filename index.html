@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crown Photo Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a2e;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .container {
+            background-color: #2e0e5a;
+            border-radius: 1rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            max-width: 90%;
+            width: 100%;
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #5a189a;
+            border-radius: 0.75rem;
+            width: 100%;
+            height: auto;
+            max-width: 500px;
+            margin: 1.5rem auto;
+            display: block;
+            cursor: default;
+        }
+        .file-input-label {
+            display: inline-block;
+            background-color: #8c52ff;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .file-input-label:hover {
+            background-color: #7234e4;
+        }
+        .hidden-file-input {
+            display: none;
+        }
+        .download-btn {
+            background-color: #5a189a;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            transition: background-color 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+        .download-btn:hover {
+            background-color: #431175;
+        }
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl sm:text-4xl font-bold mb-2">Crown Your Photo</h1>
+        <p class="text-gray-300 mb-6">Upload an image to add a stylish crown!</p>
+        
+        <!-- File upload button with custom styling -->
+        <input type="file" id="image-upload" accept="image/*" class="hidden-file-input">
+        <label for="image-upload" class="file-input-label">
+            Upload Image
+        </label>
+
+        <!-- Canvas for drawing the image and crown -->
+        <canvas id="crown-canvas"></canvas>
+
+        <!-- Instructions for the user -->
+        <div id="instructions" class="text-gray-300 text-sm mt-4 hidden">
+            <p><strong>Drag</strong> the crown to move it.</p>
+            <p><strong>Drag a corner handle</strong> to resize.</p>
+            <p><strong>Drag the bottom handle</strong> to rotate.</p>
+        </div>
+
+        <!-- Button to download the final image -->
+        <button id="download-btn" class="download-btn mt-4">Download Crowned Photo</button>
+    </div>
+
+    <script>
+        // Get references to the DOM elements
+        const imageUpload = document.getElementById('image-upload');
+        const canvas = document.getElementById('crown-canvas');
+        const downloadBtn = document.getElementById('download-btn');
+        const instructionsDiv = document.getElementById('instructions');
+        const ctx = canvas.getContext('2d');
+
+        // URL for the crown image from the user
+        const crownImageUrl = "https://raw.githubusercontent.com/ShrimpieDev/OctrianPFP/main/Untitled%20design%20(18).png";
+        
+        let userImage = null;
+        let crownImage = null;
+        
+        let interaction = null; // Stores the current interaction mode ('drag', 'resize', 'rotate')
+        let activeHandle = null; // Stores which resize handle is being used
+        let startPos = {}; // Stores the starting mouse position for the interaction
+        let startCrownState = {}; // Stores the crown's properties at the start of interaction
+
+        // Crown properties
+        let crownX = 0;
+        let crownY = 0;
+        let crownWidth = 0;
+        let crownHeight = 0;
+        let crownRotation = 0;
+
+        const handleSize = 10;
+        const rotateHandleOffset = 30;
+
+        // Function to get the mouse/touch position on the canvas
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            let clientX, clientY;
+            
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        // Function to check if a point is inside a circle (for handles)
+        function isPointInCircle(point, center, radius) {
+            return Math.sqrt(Math.pow(point.x - center.x, 2) + Math.pow(point.y - center.y, 2)) <= radius;
+        }
+
+        // Function to check what part of the crown the user clicked
+        function hitTest(pos) {
+            const centerX = crownX + crownWidth / 2;
+            const centerY = crownY + crownHeight / 2;
+            const crownOrigin = { x: centerX, y: centerY };
+
+            // Transform mouse position to the crown's local coordinate system
+            const localX = pos.x - crownOrigin.x;
+            const localY = pos.y - crownOrigin.y;
+            const rotatedX = localX * Math.cos(-crownRotation) - localY * Math.sin(-crownRotation);
+            const rotatedY = localX * Math.sin(-crownRotation) + localY * Math.cos(-crownRotation);
+
+            // Bounding box for the crown
+            const bbox = {
+                x: -crownWidth / 2, y: -crownHeight / 2,
+                width: crownWidth, height: crownHeight
+            };
+
+            // Check for hits on resize handles (corner circles)
+            const handles = {
+                'br': { x: bbox.x + bbox.width, y: bbox.y + bbox.height },
+                'bl': { x: bbox.x, y: bbox.y + bbox.height },
+                'tr': { x: bbox.x + bbox.width, y: bbox.y },
+                'tl': { x: bbox.x, y: bbox.y }
+            };
+
+            for (const handle in handles) {
+                if (isPointInCircle({ x: rotatedX, y: rotatedY }, handles[handle], handleSize)) {
+                    return { type: 'resize', handle: handle };
+                }
+            }
+            
+            // Check for hit on rotate handle
+            const rotateHandlePos = { x: 0, y: bbox.y + bbox.height + rotateHandleOffset };
+            if (isPointInCircle({ x: rotatedX, y: rotatedY }, rotateHandlePos, handleSize)) {
+                return { type: 'rotate' };
+            }
+
+            // Check for hit on the crown body (drag)
+            if (rotatedX >= bbox.x && rotatedX <= bbox.x + bbox.width &&
+                rotatedY >= bbox.y && rotatedY <= bbox.y + bbox.height) {
+                return { type: 'drag' };
+            }
+
+            return null;
+        }
+
+        // Main function to draw the image and crown
+        function drawCanvas() {
+            if (!userImage) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.font = '24px Inter';
+                ctx.fillStyle = '#6a6a8c';
+                ctx.textAlign = 'center';
+                ctx.fillText('Upload an image to get started', canvas.width / 2, canvas.height / 2);
+                instructionsDiv.classList.add('hidden');
+                return;
+            }
+
+            // Draw the user's image first
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(userImage, 0, 0, canvas.width, canvas.height);
+            
+            if (crownImage) {
+                // Save the current canvas state
+                ctx.save();
+                
+                // Translate to the center of the crown
+                const centerX = crownX + crownWidth / 2;
+                const centerY = crownY + crownHeight / 2;
+                ctx.translate(centerX, centerY);
+                
+                // Rotate the context
+                ctx.rotate(crownRotation);
+                
+                // Draw the crown image centered on the translated point
+                ctx.drawImage(crownImage, -crownWidth / 2, -crownHeight / 2, crownWidth, crownHeight);
+
+                // Draw the interactive bounding box and handles
+                ctx.strokeStyle = '#8c52ff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-crownWidth / 2, -crownHeight / 2, crownWidth, crownHeight);
+                
+                // Draw corner handles
+                const handles = [
+                    { x: -crownWidth / 2, y: -crownHeight / 2 }, // Top-left
+                    { x: crownWidth / 2, y: -crownHeight / 2 }, // Top-right
+                    { x: crownWidth / 2, y: crownHeight / 2 }, // Bottom-right
+                    { x: -crownWidth / 2, y: crownHeight / 2 }  // Bottom-left
+                ];
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#2e0e5a';
+                ctx.lineWidth = 1;
+                handles.forEach(handle => {
+                    ctx.beginPath();
+                    ctx.arc(handle.x, handle.y, handleSize / 2, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.stroke();
+                });
+                
+                // Draw rotation handle
+                ctx.beginPath();
+                ctx.arc(0, crownHeight / 2 + rotateHandleOffset, handleSize / 2, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
+
+                // Restore the canvas state
+                ctx.restore();
+            }
+        }
+        
+        function handleStart(e) {
+            e.preventDefault();
+            const pos = getPos(e);
+            
+            // Store the initial position and crown state
+            startPos = pos;
+            startCrownState = {
+                x: crownX, y: crownY,
+                width: crownWidth, height: crownHeight,
+                rotation: crownRotation
+            };
+
+            const hit = hitTest(pos);
+            if (hit) {
+                interaction = hit.type;
+                if (interaction === 'resize') {
+                    activeHandle = hit.handle;
+                }
+            } else {
+                interaction = null;
+            }
+        }
+
+        function handleMove(e) {
+            if (!interaction) return;
+            e.preventDefault();
+
+            const pos = getPos(e);
+            const dx = pos.x - startPos.x;
+            const dy = pos.y - startPos.y;
+
+            if (interaction === 'drag') {
+                crownX = startCrownState.x + dx;
+                crownY = startCrownState.y + dy;
+            } else if (interaction === 'resize') {
+                const aspect = crownImage.naturalWidth / crownImage.naturalHeight;
+                let newWidth, newHeight;
+                
+                if (activeHandle === 'br' || activeHandle === 'tl') {
+                    newWidth = startCrownState.width + dx;
+                    newHeight = startCrownState.height + (dx / aspect);
+                } else if (activeHandle === 'bl' || activeHandle === 'tr') {
+                    newWidth = startCrownState.width - dx;
+                    newHeight = startCrownState.height - (dx / aspect);
+                }
+                
+                // Prevent negative dimensions
+                if (newWidth > 20 && newHeight > 20) {
+                    crownWidth = newWidth;
+                    crownHeight = newHeight;
+                    
+                    // Adjust position to keep the opposite handle fixed
+                    if (activeHandle === 'tl' || activeHandle === 'bl') {
+                        crownX = startCrownState.x - (crownWidth - startCrownState.width);
+                    }
+                    if (activeHandle === 'tl' || activeHandle === 'tr') {
+                        crownY = startCrownState.y - (crownHeight - startCrownState.height);
+                    }
+                }
+            } else if (interaction === 'rotate') {
+                const centerX = startCrownState.x + startCrownState.width / 2;
+                const centerY = startCrownState.y + startCrownState.height / 2;
+
+                const startAngle = Math.atan2(startPos.y - centerY, startPos.x - centerX);
+                const currentAngle = Math.atan2(pos.y - centerY, pos.x - centerX);
+
+                crownRotation = startCrownState.rotation + (currentAngle - startAngle);
+            }
+
+            drawCanvas();
+        }
+
+        function handleEnd() {
+            interaction = null;
+            activeHandle = null;
+        }
+
+        // Event listeners for mouse and touch
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('mousemove', handleMove);
+        canvas.addEventListener('mouseup', handleEnd);
+        canvas.addEventListener('mouseleave', handleEnd);
+        
+        canvas.addEventListener('touchstart', (e) => handleStart(e));
+        canvas.addEventListener('touchmove', (e) => handleMove(e));
+        canvas.addEventListener('touchend', (e) => handleEnd(e));
+
+        // Function to handle image upload
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                userImage = new Image();
+                userImage.onload = function() {
+                    canvas.width = userImage.naturalWidth;
+                    canvas.height = userImage.naturalHeight;
+                    
+                    if (crownImage) {
+                         crownWidth = userImage.naturalWidth * 0.45;
+                         crownHeight = crownImage.naturalHeight * (crownWidth / crownImage.naturalWidth);
+                         crownX = (canvas.width / 2) - (crownWidth / 2);
+                         crownY = canvas.height * 0.05;
+                         crownRotation = 0;
+                    }
+                    drawCanvas();
+                    instructionsDiv.classList.remove('hidden');
+                };
+                userImage.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Function to load the crown image
+        function loadCrownImage() {
+            // Using fetch to get the image data as a blob to avoid 'tainted canvas'
+            fetch(crownImageUrl)
+                .then(response => response.blob())
+                .then(blob => {
+                    const objectURL = URL.createObjectURL(blob);
+                    crownImage = new Image();
+                    crownImage.onload = function() {
+                        URL.revokeObjectURL(objectURL); // Clean up the object URL
+                        // Initial size and position once the crown image is loaded
+                        const container = document.querySelector('.container');
+                        const containerWidth = container.offsetWidth;
+                        const size = Math.min(containerWidth * 0.9, 500);
+                        canvas.width = size;
+                        canvas.height = size;
+                        
+                        crownWidth = canvas.width * 0.45;
+                        crownHeight = crownImage.naturalHeight * (crownWidth / crownImage.naturalWidth);
+                        crownX = (canvas.width / 2) - (crownWidth / 2);
+                        crownY = canvas.height * 0.05;
+                        drawCanvas();
+                    };
+                    crownImage.onerror = () => {
+                        console.error("Failed to load crown image from URL.");
+                    };
+                    crownImage.src = objectURL;
+                })
+                .catch(error => console.error("Error fetching crown image:", error));
+        }
+
+        // Add event listeners
+        imageUpload.addEventListener('change', handleImageUpload);
+        downloadBtn.addEventListener('click', function() {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = userImage.naturalWidth;
+            tempCanvas.height = userImage.naturalHeight;
+            
+            tempCtx.drawImage(userImage, 0, 0, userImage.naturalWidth, userImage.naturalHeight);
+            
+            // Draw crown on temp canvas
+            const centerX = crownX + crownWidth / 2;
+            const centerY = crownY + crownHeight / 2;
+            tempCtx.save();
+            tempCtx.translate(centerX, centerY);
+            tempCtx.rotate(crownRotation);
+            tempCtx.drawImage(crownImage, -crownWidth / 2, -crownHeight / 2, crownWidth, crownHeight);
+            tempCtx.restore();
+
+            const dataUrl = tempCanvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = 'crowned_photo.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Set initial canvas size and message
+        window.addEventListener('load', () => {
+            loadCrownImage();
+            drawCanvas(); // Initial draw with placeholder message
+        });
+    </script>
+</body>
+</html>
