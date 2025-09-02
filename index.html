@@ -66,7 +66,7 @@
         </div>
         <!-- Instructions and Character Selection Screen -->
         <div id="start-screen" class="bg-gray-800 p-6 shadow-xl w-full flex flex-col items-center justify-center gap-6 mb-4 border-2 border-gray-700 hidden">
-            <h2 class="text-3xl font-bold mt-4 uppercase">CHOOSE YOUR CHARACTER</h2>
+            <h2 class="text-3xl font-bold mt-4 uppercase text-center">CHOOSE YOUR CHARACTER</h2>
             <div class="flex gap-8">
                 <button id="select-sloth-btn" class="character-btn" style="background-image: url('https://github.com/ShrimpieDev/slothXshrimpers/blob/main/sloth-image.jpg?raw=true');"></button>
                 <button id="select-shrimp-btn" class="character-btn" style="background-image: url('https://github.com/ShrimpieDev/slothXshrimpers/blob/main/shrimper-image.jpg?raw=true');"></button>
@@ -152,6 +152,7 @@
             modal.classList.add('hidden');
             shareXBtn.classList.add('hidden');
             if (gameState.gameEnded) {
+                clearInterval(gameLoopInterval);
                 clearInterval(speedIncreaseInterval);
                 startScreen.classList.remove('hidden');
                 canvas.classList.add('hidden');
