@@ -16,14 +16,6 @@
             display: block;
             background-color: #2c5246;
             box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
-            width: 400px;
-            height: 600px;
-        }
-        @media (max-width: 600px) {
-            canvas {
-                width: 100vw;
-                height: 100vh;
-            }
         }
         .character-btn {
             background-size: cover;
@@ -46,17 +38,20 @@
     <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
         <div class="bg-gray-800 p-6 rounded-2xl shadow-xl max-w-sm w-full text-center border-2 border-gray-700">
             <p id="modal-message" class="text-xl font-semibold mb-4 text-white"></p>
-            <button id="close-modal-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-xl transition-colors">
-                OK
-            </button>
-            <a id="share-x-btn" class="inline-block mt-4 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-xl transition-colors hidden">
-                Share on X
-            </a>
+            <div id="story-container" class="mt-4 text-sm italic text-gray-300"></div>
+            <div class="flex flex-col items-center gap-2 mt-4">
+                <button id="close-modal-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-xl transition-colors">
+                    OK
+                </button>
+                <a id="share-x-btn" class="inline-block bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-xl transition-colors hidden">
+                    Share on X
+                </a>
+            </div>
         </div>
     </div>
     <!-- Main Game Container -->
     <div class="flex flex-col items-center gap-4 w-full max-w-5xl">
-        <h1 class="text-4xl sm:text-5xl font-extrabold text-white text-center drop-shadow-lg mb-4 uppercase">
+        <h1 id="main-title" class="text-4xl sm:text-5xl font-extrabold text-white text-center drop-shadow-lg mb-4 uppercase">
             Sloths & Shrimpers Race
         </h1>
         <!-- Loading Screen -->
@@ -98,6 +93,7 @@
         const selectSlothBtn = document.getElementById('select-sloth-btn');
         const selectShrimpBtn = document.getElementById('select-shrimp-btn');
         const loadingScreen = document.getElementById('loading-screen');
+        const mainTitle = document.getElementById('main-title');
 
         let playerChar = null;
         let gameActive = false;
@@ -156,6 +152,7 @@
                 clearInterval(speedIncreaseInterval);
                 startScreen.classList.remove('hidden');
                 canvas.classList.add('hidden');
+                mainTitle.classList.remove('hidden'); 
                 
                 gameState.player.x = 0;
                 gameState.player.y = 0;
@@ -165,7 +162,7 @@
                 gameState.player.speed = BASE_SPEED;
             }
         });
-
+        
         const playerSizes = {
             sloth: { width: 48, height: 66 },
             shrimp: { width: 60, height: 82.5 }
@@ -346,6 +343,7 @@
         function startGame() {
             startScreen.classList.add('hidden');
             canvas.classList.remove('hidden');
+            mainTitle.classList.add('hidden'); 
             gameActive = true;
             gameState.player.type = playerChar;
             gameState.player.size = playerSizes[playerChar];
