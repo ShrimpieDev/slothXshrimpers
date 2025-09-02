@@ -185,8 +185,8 @@
         function setupCanvas() {
             canvas = document.getElementById('game-canvas');
             ctx = canvas.getContext('2d');
-            canvas.width = 400;
-            canvas.height = 600;
+            canvas.width = window.innerWidth > 600 ? 400 : window.innerWidth;
+            canvas.height = window.innerWidth > 600 ? 600 : window.innerHeight;
         }
 
         function clearCanvas() {
